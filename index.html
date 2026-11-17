@@ -317,15 +317,75 @@
     });
   }
 
-  /* The headline. Gets less polite the wider the gap gets. */
-  function headline(name, gap, run){
-    if (run >= 6) return name + " has won " + run + " on the bounce. Someone stop this";
-    if (run >= 3) return name + " has won " + run + " on the bounce";
-    if (gap >= 8) return name + " leads by " + gap + ". This is bullying now";
-    if (gap >= 5) return name + " leads by " + gap + ". Getting embarrassing";
-    if (gap >= 3) return name + " leads by " + gap + " and won’t shut up about it";
-    if (gap === 2) return name + " leads by two";
-    return name + " leads by one. Hold the parade";
+  /* The headline. Gets less polite the wider the gap gets, and each band has
+     a few versions so it doesn't read the same two days running. The one
+     picked comes from the number of games played, so both phones agree. */
+  var LINES = {
+    level: [
+      "All square at %a each. Nobody gets to gloat",
+      "%a each. Somebody break the deadlock",
+      "Dead level at %a. Awkward for everyone",
+      "%a apiece. Not a thing between you"
+    ],
+    one: [
+      "%n leads by one. Hold the parade",
+      "%n is one clear. Don’t get comfortable",
+      "%n leads by one. Statistically meaningless",
+      "One in it. %n is barely ahead"
+    ],
+    two: [
+      "%n leads by two",
+      "%n is two clear",
+      "%n leads by two. Early days",
+      "Two in it, and %n has the edge"
+    ],
+    few: [
+      "%n leads by %g and won’t shut up about it",
+      "%n is %g clear and insufferable",
+      "%n leads by %g. The gap is telling",
+      "%g ahead for %n. Starting to look deliberate"
+    ],
+    lots: [
+      "%n leads by %g. Getting embarrassing",
+      "%n is %g clear. Someone say something",
+      "%n leads by %g. This has stopped being funny",
+      "%g in it. %n has taken over"
+    ],
+    loads: [
+      "%n leads by %g. This is bullying now",
+      "%n is %g clear. Call it off",
+      "%n leads by %g. Have a word with yourself",
+      "%g ahead. %n owns the table"
+    ],
+    run: [
+      "%n has won %r on the bounce",
+      "%r straight to %n. Nobody’s stopping him",
+      "%n has taken the last %r. Unbeaten run",
+      "%r in a row for %n"
+    ],
+    runaway: [
+      "%n has won %r on the bounce. Someone stop this",
+      "%r in a row for %n. This is a hostage situation",
+      "%n has won %r straight. Table’s been claimed",
+      "%r unanswered for %n. Somebody intervene"
+    ]
+  };
+
+  function line(pack, seed, bits){
+    var s = LINES[pack][seed % LINES[pack].length];
+    return s.replace(/%n/g, bits.n).replace(/%g/g, bits.g)
+            .replace(/%r/g, bits.r).replace(/%a/g, bits.a);
+  }
+
+  function headline(name, gap, run, seed){
+    var bits = { n:name, g:gap, r:run, a:0 };
+    if (run >= 6) return line("runaway", seed, bits);
+    if (run >= 3) return line("run", seed, bits);
+    if (gap >= 8) return line("loads", seed, bits);
+    if (gap >= 5) return line("lots", seed, bits);
+    if (gap >= 3) return line("few", seed, bits);
+    if (gap === 2) return line("two", seed, bits);
+    return line("one", seed, bits);
   }
 
   function split(a, b, idA, idB){
@@ -407,11 +467,11 @@
       v.textContent = "Nothing on the board yet";
     } else if (gap === 0){
       v.className = "band";
-      v.textContent = "All square at " + a + " each. Nobody gets to gloat";
+      v.textContent = line("level", list.length, { n:"", g:0, r:0, a:a });
     } else {
       var top = a > b ? "a" : "b";
       v.className = "band lead-" + top;
-      v.textContent = headline(NAME[top], gap, hot === top ? run : 0);
+      v.textContent = headline(NAME[top], gap, hot === top ? run : 0, list.length);
       $(top === "a" ? "cardA" : "cardB").className = "card " + top + " lead";
     }
 
