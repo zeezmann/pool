@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zeez vs JJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#05070E;
+    --ink:#F4F6FB;
+    --mute:#78839C;
+    --faint:#5A6478;
+    --line:rgba(255,255,255,.1);
+    --gold:#F0C96B; --gold-hi:#FFF6DF; --gold-lo:#9C7A2E;
+    --steel:#BFD4F2; --steel-hi:#F4FBFF; --steel-lo:#6E86AE;
+    --holo1:#6EE7F9; --holo2:#A78BFA; --holo3:#F0A6D8;
+    --d:"Bebas Neue",Impact,sans-serif;
+    --s:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--s);
+    font-size:16px;line-height:1.5;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(820px 520px at 50% -8%,rgba(167,139,250,.16),transparent 62%),
+      radial-gradient(640px 400px at 6% 28%,rgba(110,231,249,.08),transparent 60%),
+      radial-gradient(640px 400px at 96% 22%,rgba(240,201,107,.08),transparent 60%);
+  }
+  .sheet{position:relative;z-index:2;max-width:800px;margin:0 auto;padding:26px 16px 56px}
+  .micro{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .topline{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+
+  /* ---------- the cards ---------- */
+  .duo{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+  .vs{font-family:var(--d);font-size:clamp(18px,4.4vw,26px);color:var(--mute);letter-spacing:.06em}
+  .card{
+    position:relative;border-radius:16px;padding:2px;
+    background:conic-gradient(from 200deg,var(--holo1),var(--holo2),var(--holo3),var(--gold),var(--holo1));
+    transition:box-shadow .5s ease;
+  }
+  .card.lead{box-shadow:0 0 44px -10px rgba(240,201,107,.45)}
+  .card.b.lead{box-shadow:0 0 44px -10px rgba(191,212,242,.4)}
+  .card .in{
+    position:relative;overflow:hidden;border-radius:14px;
+    padding:22px 16px 18px;text-align:center;
+    background:linear-gradient(170deg,#18213F 0%,#0C1226 55%,#080C1A 100%);
+  }
+  .card .in::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(118deg,transparent 30%,rgba(255,255,255,.1) 46%,transparent 58%);
+  }
+  .rating{
+    position:relative;font-family:var(--d);font-size:clamp(54px,13.5vw,86px);line-height:.82;
+    letter-spacing:.01em;font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,var(--gold-hi),var(--gold) 48%,var(--gold-lo));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .card.b .rating{background:linear-gradient(180deg,var(--steel-hi),var(--steel) 48%,var(--steel-lo));
+                  -webkit-background-clip:text;background-clip:text}
+  .pos{position:relative;font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+       color:var(--gold);margin-top:3px}
+  .card.b .pos{color:var(--steel)}
+  .nm{
+    position:relative;font-family:var(--d);font-size:clamp(26px,6.4vw,42px);line-height:1;
+    letter-spacing:.03em;margin:12px 0 0;padding-top:11px;border-top:1px solid var(--line);
+    overflow-wrap:anywhere;
+  }
+  .sub{position:relative;font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+       color:var(--mute);margin-top:5px;min-height:14px}
+  .chip{
+    position:relative;display:inline-block;margin-top:9px;
+    font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    padding:4px 10px;border-radius:999px;
+  }
+  .chip.hot-a{background:linear-gradient(90deg,var(--gold-lo),var(--gold));color:#140C00}
+  .chip.hot-b{background:linear-gradient(90deg,var(--steel-lo),var(--steel));color:#000E1C}
+  .chip.cold{border:1px solid var(--line);color:var(--faint)}
+
+  .band{
+    margin-top:14px;border-radius:12px;padding:14px 18px;text-align:center;
+    font-family:var(--d);font-size:clamp(16px,3.7vw,25px);letter-spacing:.035em;
+    text-wrap:balance;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--mute);
+  }
+  .band.lead-a{background:linear-gradient(90deg,var(--gold-lo),var(--gold) 50%,var(--gold-hi));
+               color:#140C00;border-color:transparent}
+  .band.lead-b{background:linear-gradient(90deg,var(--steel-lo),var(--steel) 50%,var(--steel-hi));
+               color:#000E1C;border-color:transparent}
+
+  /* ---------- heads ---------- */
+  .head{display:flex;align-items:center;gap:12px;margin:30px 0 12px}
+  .head .rule{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.18),transparent)}
+
+  /* ---------- tape ---------- */
+  .tape{border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.028);padding:2px 20px 10px}
+  .trow{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .trow:last-child{border-bottom:0}
+  .trow .top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+  .trow .v{font-family:var(--d);font-size:clamp(20px,4.5vw,29px);letter-spacing:.02em}
+  .trow .v.l{text-align:right;color:var(--gold)}
+  .trow .v.r{text-align:left;color:var(--steel)}
+  .trow .lab{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+             color:var(--faint);text-align:center;min-width:98px}
+  .track{display:flex;height:6px;margin-top:11px;background:rgba(255,255,255,.07);
+         border-radius:6px;overflow:hidden}
+  .track i{display:block;height:100%;transition:width .7s cubic-bezier(.2,.7,.2,1)}
+  .track .ia{background:linear-gradient(90deg,var(--gold-lo),var(--gold))}
+  .track .ib{background:linear-gradient(90deg,var(--steel),var(--steel-lo));margin-left:auto}
+  .pips{display:flex;gap:5px;align-items:center}
+  .pips.l{justify-content:flex-end}
+  .pip{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.1)}
+  .l .pip.on{background:var(--gold);box-shadow:0 0 10px rgba(240,201,107,.6)}
+  .r .pip.on{background:var(--steel);box-shadow:0 0 10px rgba(191,212,242,.6)}
+
+  /* ---------- post ---------- */
+  .post{border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.028);padding:18px 20px 20px}
+  .note{
+    width:100%;padding:13px 14px;margin-bottom:12px;border-radius:9px;
+    background:rgba(255,255,255,.04);border:1px solid var(--line);
+    color:var(--ink);font-family:var(--s);font-size:15px;
+  }
+  .note::placeholder{color:var(--faint)}
+  .note:focus{outline:none;border-color:rgba(240,201,107,.5);background:rgba(255,255,255,.07)}
+  .btns{display:flex;gap:9px;flex-wrap:wrap}
+  .btn{
+    flex:1 1 160px;padding:15px 10px;cursor:pointer;border:0;border-radius:9px;
+    font-family:var(--d);font-size:clamp(15px,3.3vw,19px);letter-spacing:.055em;
+    background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-lo));color:#140C00;
+    transition:filter .15s ease,transform .07s ease;
+  }
+  .btn.b{background:linear-gradient(180deg,var(--steel-hi),var(--steel) 55%,var(--steel-lo));color:#000E1C}
+  .btn.v{flex:0 1 104px;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--mute)}
+  .btn:hover{filter:brightness(1.1)}
+  .btn.v:hover{color:var(--ink);border-color:rgba(255,255,255,.24)}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .status{margin:12px 0 0;font-size:12.5px;color:var(--faint);min-height:19px}
+  .status.bad{color:#F0A6D8;font-weight:500}
+
+  /* ---------- log ---------- */
+  .gd{border-radius:13px;border:1px solid var(--line);background:rgba(255,255,255,.028);
+      margin-bottom:9px;overflow:hidden}
+  .gd-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;
+           border-bottom:1px solid rgba(255,255,255,.07)}
+  .gd-head .no{font-family:var(--d);font-size:16px;letter-spacing:.05em}
+  .gd-head .dt{font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .gd-head .sc{margin-left:auto;font-family:var(--d);font-size:18px;letter-spacing:.05em;color:var(--faint)}
+  .gd-head .sc .w-a{color:var(--gold)}
+  .gd-head .sc .w-b{color:var(--steel)}
+  .hit{display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.045)}
+  .hit:last-child{border-bottom:0}
+  .hit .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}
+  .hit.b .dot{background:var(--steel)}
+  .hit.v .dot{background:rgba(255,255,255,.18)}
+  .hit .who{font-family:var(--d);font-size:16px;letter-spacing:.05em;flex:none}
+  .hit.v .who{color:var(--faint)}
+  .hit .said{font-size:14.5px;color:var(--mute)}
+  .hit .x{
+    margin-left:auto;flex:none;border:0;background:none;cursor:pointer;padding:3px 6px;
+    font-size:17px;line-height:1;color:var(--faint);opacity:0;transition:opacity .2s ease,color .2s ease;
+  }
+  .hit:hover .x,.hit .x:focus-visible{opacity:1}
+  .hit .x:hover{color:var(--holo3)}
+
+  .none{border:1px dashed var(--line);border-radius:12px;padding:26px;text-align:center;
+        font-size:14px;color:var(--faint)}
+  footer{margin-top:34px;text-align:center}
+
+  @media (max-width:520px){
+    .duo{gap:6px}
+    .card .in{padding:18px 10px 15px}
+    .trow .lab{min-width:76px;font-size:9px}
+    .btn{flex:1 1 100%}
+    .btn.v{flex:1 1 100%}
+    .hit{flex-wrap:wrap}
+    .hit .x{opacity:1}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="topline">
+    <span class="micro">The office table</span>
+    <span class="micro" id="billSince">&nbsp;</span>
+  </div>
+
+  <div class="duo">
+    <div class="card a" id="cardA"><div class="in">
+      <div class="rating" id="winsA">0</div>
+      <div class="pos">Games won</div>
+      <h1 class="nm" id="nameA">Zeez</h1>
+      <div class="sub" id="subA">&nbsp;</div>
+      <div id="chipA"></div>
+    </div></div>
+    <div class="vs">VS</div>
+    <div class="card b" id="cardB"><div class="in">
+      <div class="rating" id="winsB">0</div>
+      <div class="pos">Games won</div>
+      <h1 class="nm" id="nameB">JJ</h1>
+      <div class="sub" id="subB">&nbsp;</div>
+      <div id="chipB"></div>
+    </div></div>
+  </div>
+  <div class="band" id="verdict">Nothing on the board yet</div>
+
+  <div class="head"><span class="micro">Tale of the tape</span><span class="rule"></span></div>
+  <section class="tape">
+    <div class="trow">
+      <div class="top"><div class="v l" id="tapeWinsA">0</div><div class="lab">Games won</div><div class="v r" id="tapeWinsB">0</div></div>
+      <div class="track"><i class="ia" id="trkWinsA"></i><i class="ib" id="trkWinsB"></i></div>
+    </div>
+    <div class="trow">
+      <div class="top"><div class="v l" id="tapeRateA">&ndash;</div><div class="lab">Win rate</div><div class="v r" id="tapeRateB">&ndash;</div></div>
+      <div class="track"><i class="ia" id="trkRateA"></i><i class="ib" id="trkRateB"></i></div>
+    </div>
+    <div class="trow">
+      <div class="top"><div class="v l" id="tapeDaysA">0</div><div class="lab">Gamedays won</div><div class="v r" id="tapeDaysB">0</div></div>
+      <div class="track"><i class="ia" id="trkDaysA"></i><i class="ib" id="trkDaysB"></i></div>
+    </div>
+    <div class="trow">
+      <div class="top"><div class="v l" id="tapeRunA">&ndash;</div><div class="lab">Best run</div><div class="v r" id="tapeRunB">&ndash;</div></div>
+    </div>
+    <div class="trow">
+      <div class="top"><div class="l"><div class="pips l" id="pipsA"></div></div><div class="lab">Last five</div><div class="r"><div class="pips" id="pipsB"></div></div></div>
+    </div>
+  </section>
+
+  <div class="head"><span class="micro">Put it on the record</span><span class="rule"></span></div>
+  <section class="post">
+    <input class="note" id="note" maxlength="90" autocomplete="off" placeholder="Excuses, trash talk, whatever (optional)">
+    <div class="btns">
+      <button class="btn" id="winA" type="button">Zeez takes it</button>
+      <button class="btn b" id="winB" type="button">JJ takes it</button>
+      <button class="btn v" id="winV" type="button">Void</button>
+    </div>
+    <p class="status" id="status"></p>
+  </section>
+
+  <div class="head"><span class="micro">Previous meetings</span><span class="rule"></span></div>
+  <section id="logBody"></section>
+
+  <footer><span class="micro" id="foot">Winner stays on</span></footer>
+</div>
+
+<script id="app">
+(function(){
+  "use strict";
+
+  /* ===================== THE ONLY BITS TO EDIT =====================
+     Paste the Firebase settings from your FIFA site below, then set the
+     two names. Nothing else in this file needs touching. */
+
+  var A = "Zeez";                  // gold card
+  var B = "JJ";                    // steel card
+  var DB_PATH = "poolleague";      // this league's own corner of the database
+
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBKhuUJ5rf1yBgTsEzv2s8dA9pq_9ip-I4",
+    authDomain: "last-legs-cup.firebaseapp.com",
+    databaseURL: "https://last-legs-cup-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "last-legs-cup",
+    storageBucket: "last-legs-cup.firebasestorage.app",
+    messagingSenderId: "612697629060",
+    appId: "1:612697629060:web:22ca8e2f069c3dbd8d3dd1"
+  };
+  /* ================================================================ */
+
+  var $ = function(id){ return document.getElementById(id); };
+  var NAME = { a:A, b:B, "void":"Void" };
+  var games = [], ref = null, busy = false;
+
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var DAY = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  function dateOf(isoDate){
+    var p = String(isoDate || "").split("-");
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+  function shortDate(isoDate){
+    var d = dateOf(isoDate);
+    return DAY[d.getDay()] + " " + d.getDate() + " " + MON[d.getMonth()];
+  }
+  function pad2(n){ return (n < 10 ? "0" : "") + n; }
+  function played(){ return games.filter(function(g){ return g.w !== "void"; }); }
+
+  function bestRun(list, who){
+    var best = 0, n = 0;
+    list.forEach(function(g){ n = (g.w === who) ? n + 1 : 0; if (n > best) best = n; });
+    return best;
+  }
+
+  /* Every distinct day they played, oldest first. */
+  function gamedays(){
+    var order = [], bag = {};
+    games.forEach(function(g){
+      if (!bag[g.d]){ bag[g.d] = []; order.push(g.d); }
+      bag[g.d].push(g);
+    });
+    return order.map(function(d, i){
+      var day = bag[d];
+      var a = day.filter(function(g){ return g.w === "a"; }).length;
+      var b = day.filter(function(g){ return g.w === "b"; }).length;
+      return { d:d, no:i + 1, games:day, a:a, b:b,
+               won: a > b ? "a" : b > a ? "b" : null };
+    });
+  }
+
+  /* The headline. Gets less polite the wider the gap gets. */
+  function headline(name, gap, run){
+    if (run >= 6) return name + " has won " + run + " on the bounce. Someone stop this";
+    if (run >= 3) return name + " has won " + run + " on the bounce";
+    if (gap >= 8) return name + " leads by " + gap + ". This is bullying now";
+    if (gap >= 5) return name + " leads by " + gap + ". Getting embarrassing";
+    if (gap >= 3) return name + " leads by " + gap + " and won’t shut up about it";
+    if (gap === 2) return name + " leads by two";
+    return name + " leads by one. Hold the parade";
+  }
+
+  function split(a, b, idA, idB){
+    var total = a + b;
+    $(idA).style.width = (total ? (a / total * 100) : 0) + "%";
+    $(idB).style.width = (total ? (b / total * 100) : 0) + "%";
+  }
+
+  function render(){
+    var list = played();
+    var a = list.filter(function(g){ return g.w === "a"; }).length;
+    var b = list.length - a;
+    var days = gamedays();
+
+    $("nameA").textContent = A;
+    $("nameB").textContent = B;
+    $("winsA").textContent = a;
+    $("winsB").textContent = b;
+    $("tapeWinsA").textContent = a;
+    $("tapeWinsB").textContent = b;
+    split(a, b, "trkWinsA", "trkWinsB");
+
+    var rateA = list.length ? Math.round(a / list.length * 100) : 0;
+    $("tapeRateA").textContent = list.length ? rateA + "%" : "–";
+    $("tapeRateB").textContent = list.length ? (100 - rateA) + "%" : "–";
+    split(a, b, "trkRateA", "trkRateB");
+
+    var dA = days.filter(function(x){ return x.won === "a"; }).length;
+    var dB = days.filter(function(x){ return x.won === "b"; }).length;
+    $("tapeDaysA").textContent = dA;
+    $("tapeDaysB").textContent = dB;
+    split(dA, dB, "trkDaysA", "trkDaysB");
+
+    var rA = bestRun(list, "a"), rB = bestRun(list, "b");
+    $("tapeRunA").textContent = rA ? rA + " in a row" : "–";
+    $("tapeRunB").textContent = rB ? rB + " in a row" : "–";
+
+    var last5 = list.slice(-5);
+    [["a", "pipsA"], ["b", "pipsB"]].forEach(function(pair){
+      var host = $(pair[1]);
+      host.innerHTML = "";
+      last5.forEach(function(g){
+        var s = document.createElement("span");
+        s.className = "pip" + (g.w === pair[0] ? " on" : "");
+        host.appendChild(s);
+      });
+    });
+
+    // current run, counted back from the last game played
+    var run = 0, hot = null;
+    for (var i = list.length - 1; i >= 0; i--){
+      if (hot === null){ hot = list[i].w; run = 1; }
+      else if (list[i].w === hot){ run++; }
+      else break;
+    }
+
+    var rateB = list.length ? 100 - rateA : 0;
+    $("subA").textContent = days.length
+      ? dA + (dA === 1 ? " gameday" : " gamedays") + " · " + rateA + "%" : " ";
+    $("subB").textContent = days.length
+      ? dB + (dB === 1 ? " gameday" : " gamedays") + " · " + rateB + "%" : " ";
+
+    [["a", "chipA"], ["b", "chipB"]].forEach(function(t){
+      var host = $(t[1]);
+      host.innerHTML = "";
+      if (run < 3) return;
+      var mine = hot === t[0];
+      var p = document.createElement("span");
+      p.className = "chip " + (mine ? (t[0] === "a" ? "hot-a" : "hot-b") : "cold");
+      p.textContent = mine ? "Red hot" : "On the ropes";
+      host.appendChild(p);
+    });
+
+    var v = $("verdict"), gap = Math.abs(a - b);
+    $("cardA").className = "card a";
+    $("cardB").className = "card b";
+    if (!list.length){
+      v.className = "band";
+      v.textContent = "Nothing on the board yet";
+    } else if (gap === 0){
+      v.className = "band";
+      v.textContent = "All square at " + a + " each. Nobody gets to gloat";
+    } else {
+      var top = a > b ? "a" : "b";
+      v.className = "band lead-" + top;
+      v.textContent = headline(NAME[top], gap, hot === top ? run : 0);
+      $(top === "a" ? "cardA" : "cardB").className = "card " + top + " lead";
+    }
+
+    $("billSince").textContent = days.length
+      ? days.length + (days.length === 1 ? " gameday" : " gamedays") + " · since " + shortDate(days[0].d)
+      : " ";
+    $("foot").textContent = list.length
+      ? list.length + " games played · winner stays on"
+      : "Winner stays on";
+
+    var host = $("logBody");
+    host.innerHTML = "";
+    if (!days.length){
+      host.innerHTML = '<p class="none">Nothing here yet. Go and win something.</p>';
+      return;
+    }
+    days.slice().reverse().forEach(function(day){
+      var card = document.createElement("div");
+      card.className = "gd";
+
+      var head = document.createElement("div");
+      head.className = "gd-head";
+      var no = document.createElement("span");
+      no.className = "no";
+      no.textContent = "Gameday " + pad2(day.no);
+      var dt = document.createElement("span");
+      dt.className = "dt";
+      dt.textContent = shortDate(day.d);
+      var sc = document.createElement("span");
+      sc.className = "sc";
+      var sa = document.createElement("span");
+      if (day.won === "a") sa.className = "w-a";
+      sa.textContent = day.a;
+      var sb = document.createElement("span");
+      if (day.won === "b") sb.className = "w-b";
+      sb.textContent = day.b;
+      sc.appendChild(sa);
+      sc.appendChild(document.createTextNode(" – "));
+      sc.appendChild(sb);
+      head.appendChild(no); head.appendChild(dt); head.appendChild(sc);
+      card.appendChild(head);
+
+      day.games.slice().reverse().forEach(function(g){
+        var row = document.createElement("div");
+        row.className = "hit" + (g.w === "b" ? " b" : g.w === "void" ? " v" : "");
+        var dot = document.createElement("span");
+        dot.className = "dot";
+        var who = document.createElement("span");
+        who.className = "who";
+        who.textContent = NAME[g.w] || "?";
+        row.appendChild(dot);
+        row.appendChild(who);
+        if (g.note){
+          var sp = document.createElement("span");
+          sp.className = "said";
+          sp.textContent = "“" + g.note + "”";
+          row.appendChild(sp);
+        }
+        if (ref){
+          var x = document.createElement("button");
+          x.className = "x";
+          x.type = "button";
+          x.innerHTML = "&times;";
+          x.setAttribute("aria-label", "Delete this game");
+          x.onclick = function(){ wipe(g.id); };
+          row.appendChild(x);
+        }
+        card.appendChild(row);
+      });
+      host.appendChild(card);
+    });
+  }
+
+  function say(msg, bad){
+    var el = $("status");
+    el.textContent = msg || "";
+    el.className = "status" + (bad ? " bad" : "");
+  }
+
+  function iso(dt){
+    return dt.getFullYear() + "-" + pad2(dt.getMonth() + 1) + "-" + pad2(dt.getDate());
+  }
+
+  function add(winner){
+    if (!ref || busy) return;
+    busy = true;
+    var rec = {
+      d: iso(new Date()),
+      w: winner,
+      note: $("note").value.trim().slice(0, 90),
+      t: Date.now()
+    };
+    $("note").value = "";
+    say("Saving…");
+    ref.push(rec).then(function(){
+      say(winner === "void" ? "Void. Doesn’t count." : NAME[winner] + " takes it.");
+    }).catch(function(){
+      say("That didn’t save. Check your connection and try again.", true);
+    }).then(function(){ busy = false; });
+  }
+
+  function wipe(id){
+    if (!ref || busy) return;
+    busy = true;
+    ref.child(id).remove().then(function(){
+      say("Deleted.");
+    }).catch(function(){
+      say("Couldn’t delete that one.", true);
+    }).then(function(){ busy = false; });
+  }
+
+  $("winA").textContent = A + " takes it";
+  $("winB").textContent = B + " takes it";
+  $("winA").onclick = function(){ add("a"); };
+  $("winB").onclick = function(){ add("b"); };
+  $("winV").onclick = function(){ add("void"); };
+
+  render();
+  say("Connecting…");
+
+  if (!window.firebase){
+    say("Couldn’t load Firebase. Check your connection.", true);
+    return;
+  }
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    ref = firebase.database().ref(DB_PATH + "/games");
+    ref.on("value", function(snap){
+      var next = [];
+      snap.forEach(function(child){
+        var v = child.val() || {};
+        next.push({ id:child.key, d:v.d, w:v.w, note:v.note || "", t:v.t || 0 });
+      });
+      next.sort(function(x, y){ return x.t - y.t; });
+      games = next;
+      render();
+      say("");
+    }, function(){
+      say("Can’t reach the board right now.", true);
+    });
+  } catch(e){
+    say("Not connected — check the Firebase settings in this file.", true);
+  }
+})();
+</script>
+</body>
+</html>
